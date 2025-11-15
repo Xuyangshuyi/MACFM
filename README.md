@@ -9,7 +9,7 @@ Chinese long text classification plays a vital role in Natural Language Processi
 </p>
 
 # Datasets
-The required dataset can be obtained here: [Google Drive](https://drive.google.com/drive/folders/1oLAgicyUg__DqXLQYshXgRMkWKoUVpGy?usp=sharing)
+The required dataset can be obtained here: [Google Drive](https://drive.google.com/drive/folders/1oLAgicyUg__DqXLQYshXgRMkWKoUVpGy?usp=sharing).
 
 # How to run
 To run the code, you can refer to the environment configuration information at [BertGCN](https://github.com/ZeroRin/BertGCN).
