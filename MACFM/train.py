@@ -18,7 +18,7 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from datetime import datetime
 from torch.optim import lr_scheduler
-from model import BertGCN
+from model import MACFM
 from tqdm import tqdm
 import datetime
 import time
@@ -29,7 +29,7 @@ parser.add_argument('--batch_size', type=int, default=64)
 parser.add_argument('-m', '--m', type=float, default=0.8, help='the factor balancing BERT and GCN prediction')
 parser.add_argument('--nb_epochs', type=int, default=10)
 parser.add_argument('--bert_init', type=str, default='/home/shenxiang/xysy/BERT-GCN/pretrained_models/Roberta-mid',
-                    choices=['roberta-base', 'roberta-large', 'bert-base-uncased', 'bert-large-uncased'])
+                    choices=['roberta-base', 'roberta-large'])
 parser.add_argument('--pretrained_bert_ckpt', default=None)
 parser.add_argument('--dataset', default='20ng', choices=['20ng', 'R8', 'R52', 'ohsumed', 'mr', 'iflytek', 'thucnews', 'inews', 'fudan', 'sogoucs'])
 parser.add_argument('--checkpoint_dir', default=None, help='checkpoint directory, [bert_init]_[gcn_model]_[dataset] if not specified')
@@ -99,7 +99,7 @@ nb_word = nb_node - nb_train - nb_val - nb_test
 nb_class = y_train.shape[1]
 
 # instantiate model according to class number
-model = BertGCN(nb_class=nb_class, pretrained_model=bert_init, m=m, gcn_layers=gcn_layers,
+model = MACFM(nb_class=nb_class, pretrained_model=bert_init, m=m, gcn_layers=gcn_layers,
                 n_hidden=n_hidden, dropout=dropout)
 
 if pretrained_bert_ckpt is not None:
