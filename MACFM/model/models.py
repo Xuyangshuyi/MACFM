@@ -60,17 +60,12 @@ class AMFM(nn.Module):
     def forward(self, T_bar, G_bar):
         ht = th.tanh(T_bar)
         hg = th.sigmoid(G_bar)
-
         h = ht * ht + hg * hg
-
         z = th.sigmoid(h)
-
         zt = z * ht
         zg = (1.0 - z) * hg
-
         f = zt + zg
         return f
-
 
 class MACFM(th.nn.Module): # for eng_datasets,set pretrained_model='./pretrained_models/Roberta-base-eng'
     def __init__(self, pretrained_model='./pretrained_models/Roberta-mid', nb_class=20, m=0.7, gcn_layers=2,
