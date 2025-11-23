@@ -26,7 +26,6 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument('--max_length', type=int, default=64, help='the input length for bert')
 parser.add_argument('--batch_size', type=int, default=64)
-parser.add_argument('-m', '--m', type=float, default=0.8, help='the factor balancing BERT and GCN prediction')
 parser.add_argument('--nb_epochs', type=int, default=10)
 parser.add_argument('--bert_init', type=str, default='/home/shenxiang/xysy/BERT-GCN/pretrained_models/Roberta-mid',
                     choices=['roberta-base', 'roberta-large'])
