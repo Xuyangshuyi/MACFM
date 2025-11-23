@@ -4,9 +4,9 @@ import torch.nn.functional as F
 from transformers import AutoModel, AutoTokenizer
 from .torch_gcn import GCN
 
-class ChannelAttention(nn.Module):
+class Text_1D_ChannelAttention(nn.Module):
     def __init__(self, in_planes, ratio=16):
-        super(ChannelAttention, self).__init__()
+        super(Text_1D_ChannelAttention, self).__init__()
         self.avg_pool = nn.AdaptiveAvgPool1d(1)
         self.max_pool = nn.AdaptiveMaxPool1d(1)
 
@@ -23,9 +23,9 @@ class ChannelAttention(nn.Module):
         return self.sigmoid(out)
 
 
-class SpatialAttention(nn.Module):
+class Text_1D_SpatialAttention(nn.Module):
     def __init__(self, kernel_size=7):
-        super(SpatialAttention, self).__init__()
+        super(Text_1D_SpatialAttention, self).__init__()
 
         assert kernel_size in (3, 7), 'kernel size must be 3 or 7'
         padding = 3 if kernel_size == 7 else 1
@@ -41,11 +41,11 @@ class SpatialAttention(nn.Module):
         return self.sigmoid(x)
 
 
-class CBAM(nn.Module):
+class DCAM(nn.Module):
     def __init__(self, in_planes, ratio=16, kernel_size=3):
-        super(CBAM, self).__init__()
-        self.ca = ChannelAttention(in_planes, ratio)
-        self.sa = SpatialAttention(kernel_size)
+        super(DCAM, self).__init__()
+        self.ca = Text_1D_ChannelAttention(in_planes, ratio)
+        self.sa = Text_1D_SpatialAttention(kernel_size)
 
     def forward(self, x):
         x = x * self.ca(x)
@@ -53,13 +53,31 @@ class CBAM(nn.Module):
         return x
 
 
-class BertGCN(th.nn.Module): # for eng_datasets,set pretrained_model='./pretrained_models/Roberta-base-eng'
+class AMFM(nn.Module):
+    def __init__(self):
+        super(AMFM, self).__init__()
+
+    def forward(self, T_bar, G_bar):
+        ht = th.tanh(T_bar)
+        hg = th.sigmoid(G_bar)
+
+        h = ht * ht + hg * hg
+
+        z = th.sigmoid(h)
+
+        zt = z * ht
+        zg = (1.0 - z) * hg
+
+        f = zt + zg
+        return f
+
+
+class MACFM(th.nn.Module): # for eng_datasets,set pretrained_model='./pretrained_models/Roberta-base-eng'
     def __init__(self, pretrained_model='./pretrained_models/Roberta-mid', nb_class=20, m=0.7, gcn_layers=2,
                  n_hidden=200, dropout=0.1):
-        super(BertGCN, self).__init__()
+        super(MACFM, self).__init__()
         self.tan_f = nn.Tanh()
         self.sigmoid_f = nn.Sigmoid()
-        self.m = m
 
         self.nb_class = nb_class
         self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model)
@@ -75,16 +93,17 @@ class BertGCN(th.nn.Module): # for eng_datasets,set pretrained_model='./pretrain
             dropout=dropout
         )
 
-        self.cbam = CBAM(self.feat_dim)
+        self.dcam = DCAM(self.feat_dim)
+
+        self.amfm = AMFM()
 
     def forward(self, g, idx):
         input_ids, attention_mask = g.ndata['input_ids'][idx], g.ndata['attention_mask'][idx]
 
         cls_feats = self.bert_model(input_ids, attention_mask)[0][:, 0]
 
-        # Apply CBAM
         cls_feats = cls_feats.unsqueeze(-1)
-        cls_feats = self.cbam(cls_feats)
+        cls_feats = self.dcam(cls_feats)
         cls_feats = cls_feats.squeeze(-1)
 
         if self.training:
@@ -94,11 +113,10 @@ class BertGCN(th.nn.Module): # for eng_datasets,set pretrained_model='./pretrain
             cls_feats = g.ndata['cls_feats'][idx]
 
         cls_logit = self.classifier(cls_feats)
-        cls_pred = th.nn.Softmax(dim=1)(cls_logit)
         gcn_logit = self.gcn(g.ndata['cls_feats'], g, g.edata['edge_weight'])[idx]
-        gcn_pred = th.nn.Softmax(dim=1)(gcn_logit)
 
-        pred = (gcn_pred + 1e-10) * self.m + cls_pred * (1 - self.m)
-        pred = th.log(pred)
+        fused_logit = self.amfm(cls_logit, gcn_logit)
+        pred = F.log_softmax(fused_logit, dim=1)
+
         return pred
 
